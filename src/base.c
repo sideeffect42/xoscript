@@ -1,6 +1,62 @@
 #include "xo.h"
 #include <limits.h>
 
+#if 1
+
+#include <sys/cdefs.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdarg.h>
+
+#define	FAKE_FILE { ._file = -1, }
+
+static int
+vasprintf(char **str, const char *fmt, va_list ap)
+{
+	FILE f = FAKE_FILE;
+	int ret;
+
+	f._flag = (_IOWRT | _IONOFD);
+	f._base = f._ptr = malloc(128);
+	if (f._base == NULL) {
+		*str = NULL;
+		errno = ENOMEM;
+		return (-1);
+	}
+	ret = vfprintf(&f, fmt, ap);
+	if (ret < 0) {
+		free(f._base);
+		*str = NULL;
+		errno = ENOMEM;
+		return (-1);
+	}
+	*f._ptr = '\0';
+	*str = (char *)f._base;
+	return (ret);
+}
+
+static int
+asprintf(char ** __restrict s, char const * __restrict fmt, ...)
+{
+	int ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	ret = vasprintf(s, fmt, ap);
+	va_end(ap);
+	return (ret);
+}
+
+void arc4random_buf(void *_buf, size_t n) {
+	int fd = open("/dev/urandom", O_RDONLY);
+	read(fd, _buf, n);
+	close(fd);
+}
+
+#endif
+
 ctr_size ctr_program_length;
 uint64_t ctr_cwlk_subprogram;
 int ctr_in_message;
